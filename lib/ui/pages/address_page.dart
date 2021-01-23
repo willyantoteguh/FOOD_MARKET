@@ -1,17 +1,34 @@
 part of 'pages.dart';
 
 class AddressPage extends StatefulWidget {
+  final User user;
+  final String password;
+  final File pictureFile;
+
+  AddressPage(this.user, this.password, this.pictureFile);
+
   @override
   _AddressPageState createState() => _AddressPageState();
 }
 
 class _AddressPageState extends State<AddressPage> {
+  TextEditingController phoneController = TextEditingController();
+  TextEditingController addressController = TextEditingController();
+  TextEditingController houseNumController = TextEditingController();
+  bool isLoading = false;
+  List<String> cities;
+  String selectedCity;
+
+  @override
+  void initState() {
+    super.initState();
+
+    cities = ['Bandung', 'Jakarta', 'Surabaya'];
+    selectedCity = cities[0];
+  }
+
   @override
   Widget build(BuildContext context) {
-    TextEditingController phoneController = TextEditingController();
-    TextEditingController addressController = TextEditingController();
-    TextEditingController houseController = TextEditingController();
-
     return GeneralPage(
       title: 'Address',
       subtitle: "Make sure it's valid",
@@ -19,11 +36,11 @@ class _AddressPageState extends State<AddressPage> {
         Get.back();
       },
       child: Column(
-        children: <Widget>[
+        children: [
           Container(
             width: double.infinity,
             margin: EdgeInsets.fromLTRB(defaultMargin, 26, defaultMargin, 6),
-            child: Text('Phone Number', style: blackTextFont2),
+            child: Text("Phone Number", style: blackTextFont2),
           ),
           Container(
             width: double.infinity,
@@ -43,7 +60,10 @@ class _AddressPageState extends State<AddressPage> {
           Container(
             width: double.infinity,
             margin: EdgeInsets.fromLTRB(defaultMargin, 16, defaultMargin, 6),
-            child: Text('Address', style: blackTextFont2),
+            child: Text(
+              "Address",
+              style: blackTextFont2,
+            ),
           ),
           Container(
             width: double.infinity,
@@ -63,7 +83,10 @@ class _AddressPageState extends State<AddressPage> {
           Container(
             width: double.infinity,
             margin: EdgeInsets.fromLTRB(defaultMargin, 16, defaultMargin, 6),
-            child: Text('House number', style: blackTextFont2),
+            child: Text(
+              "House Number",
+              style: blackTextFont2,
+            ),
           ),
           Container(
             width: double.infinity,
@@ -73,7 +96,7 @@ class _AddressPageState extends State<AddressPage> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.black)),
             child: TextField(
-              controller: houseController,
+              controller: houseNumController,
               decoration: InputDecoration(
                   border: InputBorder.none,
                   hintStyle: greyFontStyle,
@@ -83,46 +106,100 @@ class _AddressPageState extends State<AddressPage> {
           Container(
             width: double.infinity,
             margin: EdgeInsets.fromLTRB(defaultMargin, 16, defaultMargin, 6),
-            child: Text('City', style: blackTextFont2),
+            child: Text(
+              "City",
+              style: blackTextFont2,
+            ),
           ),
           Container(
-              width: double.infinity,
-              margin: EdgeInsets.symmetric(horizontal: defaultMargin),
-              padding: EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.black)),
-              child: DropdownButton(
-                  isExpanded: true,
-                  underline: SizedBox(),
-                  items: [
-                    DropdownMenuItem(
-                      child: Text('Surabaya', style: blackTextFont3),
-                    ),
-                    DropdownMenuItem(
-                        child: Text('Mojokerto', style: blackTextFont3)),
-                    DropdownMenuItem(
-                        child: Text('Jombang', style: blackTextFont3))
-                  ],
-                  onChanged: (items) {})),
+            width: double.infinity,
+            margin: EdgeInsets.symmetric(horizontal: defaultMargin),
+            padding: EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.black)),
+            child: DropdownButton(
+                value: selectedCity,
+                isExpanded: true,
+                underline: SizedBox(),
+                items: cities
+                    .map((e) => DropdownMenuItem(
+                        value: e,
+                        child: Text(
+                          e,
+                          style: blackTextFont3,
+                        )))
+                    .toList(),
+                onChanged: (item) {
+                  setState(() {
+                    selectedCity = item;
+                  });
+                }),
+          ),
           Container(
             width: double.infinity,
             margin: EdgeInsets.only(top: 24),
             height: 45,
             padding: EdgeInsets.symmetric(horizontal: defaultMargin),
-            child: RaisedButton(
-                onPressed: () {},
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                color: mainColor,
-                child: Text(
-                  'Sign Up Now',
-                  style: GoogleFonts.poppins(
-                      color: Colors.black, fontWeight: FontWeight.w500),
-                )),
-          )
+            child: (isLoading == true)
+                ? Center(
+                    child: loadingIndicator,
+                  )
+                : RaisedButton(
+                    onPressed: () async {
+                      User user = widget.user.copyWith(
+                          phoneNumber: phoneController.text,
+                          address: addressController.text,
+                          houseNumber: houseNumController.text,
+                          city: selectedCity);
+
+                      setState(() {
+                        isLoading = true;
+                      });
+
+                      await context.bloc<UserCubit>().signUp(
+                          user, widget.password,
+                          pictureFile: widget.pictureFile);
+
+                      UserState state = context.bloc<UserCubit>().state;
+
+                      if (state is UserLoaded) {
+                        context.bloc<FoodCubit>().getFoods();
+                        context.bloc<TransactionCubit>().getTransactions();
+                        Get.to(MainPage());
+                      } else {
+                        Get.snackbar("", "",
+                            backgroundColor: "D9435E".toColor(),
+                            icon: Icon(
+                              MdiIcons.closeCircleOutline,
+                              color: Colors.white,
+                            ),
+                            titleText: Text(
+                              "Sign Up Failed",
+                              style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                            messageText: Text(
+                              (state as UserLoadingFailed).message,
+                              style: GoogleFonts.poppins(color: Colors.white),
+                            ));
+                        setState(() {
+                          isLoading = false;
+                        });
+                      }
+                    },
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                    color: mainColor,
+                    child: Text(
+                      'Sign Up Now',
+                      style: GoogleFonts.poppins(
+                          color: Colors.black, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+          ),
         ],
       ),
     );
