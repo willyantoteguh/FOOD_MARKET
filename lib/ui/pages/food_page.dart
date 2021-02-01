@@ -50,6 +50,7 @@ class _FoodPageState extends State<FoodPage> {
           ),
 
           ///LIST OF FOOD
+          ///ONLY ADMIN CAN VIEW THIS
           Container(
               height: 258,
               width: double.infinity,
