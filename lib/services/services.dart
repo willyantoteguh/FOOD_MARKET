@@ -7,4 +7,4 @@ part 'user_services.dart';
 part 'food_services.dart';
 part 'transaction_services.dart';
 
-String baseURL = 'http://192.168.0.2:8000/api/';
+String baseURL = 'http://okewilly.com/api/';
